@@ -24,6 +24,9 @@ function loadUsers() {
   return JSON.parse(data);
 }
 
+// Carregar usuários no início
+const users = loadUsers(); // Carrega os usuários do arquivo JSON
+
 // Página de Login
 app.get('/login', (req, res) => {
   res.send(`
@@ -62,7 +65,7 @@ app.post('/login', (req, res) => {
   const user = users.find(u => u.username === username && u.password === password); 
 
   if (user) {
-    req.session.user = user.nome; //Armazenando nome do usuário logado
+    req.session.user = user.nome; // Armazenando nome do usuário logado
     res.redirect('/home');
   } else {
     res.send('Usuário ou senha inválidos. <a href="/login">Tente novamente</a>');
