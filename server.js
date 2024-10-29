@@ -13,7 +13,7 @@ app.use(cookieParser());
 
 //Configurar a sessão
 app.use(session({
-  secret: '74174217947279428917', //chave secreta para os cookies
+  secret: 'd29ea5225f0bc450db1a56b1279ec507b8ed4f7be237d5443eb66ffa0744927c',
   resave: false, //evita regravar as sessões que não se alteram
   saveUninitialized: true,
 }))
