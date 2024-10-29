@@ -1,94 +1,96 @@
-//Importando express
+// Importando as dependências
 const express = require('express');
-
-//Cookies e sessions
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+const fs = require('fs');
 
-//Iniciar o express
+// Inicializando o Express
 const app = express();
 
-//Configurando o uso da biblioteca do cookie
+// Configurações de Middleware
 app.use(cookieParser());
-
-//Configurar a sessão
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
-  secret: 'd29ea5225f0bc450db1a56b1279ec507b8ed4f7be237d5443eb66ffa0744927c',
-  resave: false, //evita regravar as sessões que não se alteram
+  secret: 'd29ea5225f0bc450db1a56b1279ec507b8ed4f7be237d5443eb66ffa0744927c', // Troque por uma chave segura em produção
+  resave: false,
   saveUninitialized: true,
-}))
+  cookie: { maxAge: 600000 } // Timer para expirar os cookies registrados no navegador do usuário (10 minutos)
+}));
 
-//Dados de exemplo
-const produtos = [
-  {
-    id:1, 
-    nome: 'Produto 1', 
-    preco: 10
-  },
-  {
-    id:2, 
-    nome: 'Produto 2', 
-    preco: 15
-  },
-  {
-    id:3, 
-    nome: 'Produto 3', 
-    preco: 20
-  }
-];
+// Função para carregar dados dos usuários registrados no arquivo JSON usando 'fs'
+function loadUsers() {
+  const data = fs.readFileSync('users.json');
+  return JSON.parse(data);
+}
 
-//Rota de produtos
-app.get('/produtos', (req, res) => {
+// Página de Login
+app.get('/login', (req, res) => {
   res.send(`
-    <h1>Lista de Produtos</h1>
-    <ul>
-      ${produtos.map(
-        (produto) =>
-          `<li>
-            ${produto.nome} 
-            ${produto.preco}
-            <a href="/adicionar/${produto.id}">Adicionar</a>
-          </li>`
-      ).join('')}
-    </ul>
-    <a href="/carrinho">Ver Carrinho</a>
+    <h2>Login</h2>
+    <form method="POST" action="/login"> 
+      <!-- 
+      Método POST serve para enviar dados do formulário de login.
+      Se for removido, o formulário usará GET, fato que resulta em:
+      - Enviar dados como parâmetros na URL (visíveis).
+      - Expor senhas e nomes de usuário.
+      - Não ser seguro para informações sensíveis.
+      - Login não funcionando corretamente, pois a rota de login espera dados no corpo da requisição (POST).
+      -->
+
+      <label>Usuário: 
+        <input type="text" name="username" required/>
+      </label>
+
+      <br>
+
+      <label>Senha: 
+        <input type="password" name="password" required/>
+      </label>
+
+      <br>
+
+      <button type="submit">Entrar</button>
+    </form>
   `);
 });
 
-//Rota de adicionar o produto
-app.get('/adicionar/:id', (req, res)=>{
-  const id = parseInt(req.params.id);
-  const produto = produtos.find((p) => p.id === id);
+// Rota de Login
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
 
-  if(produto){
-    if(!req.session.carrinho){
-      req.session.carrinho = [];
-    }
-    req.session.carrinho.push(produto);
+  const user = users.find(u => u.username === username && u.password === password); 
+
+  if (user) {
+    req.session.user = user.nome; //Armazenando nome do usuário logado
+    res.redirect('/home');
+  } else {
+    res.send('Usuário ou senha inválidos. <a href="/login">Tente novamente</a>');
   }
-
-  res.redirect('/produtos');
 });
 
-//Rota do carrinho
-app.get('/carrinho', (req, res)=>{
-  const carrinho = req.session.carrinho || [];
+// Rota de Home
+app.get('/home', (req, res) => {
+  if (req.session.user) {
+    res.send(`
+      <h2>Bem-vindo, ${req.session.user}!</h2>
+      <p>Você está autenticado.</p>
+      <a href="/logout">Sair</a>
+    `);
+  } else {
+    res.redirect('/login');
+  }
+});
 
-  res.send(`
-    <h1>Carrinho de Compras</h1>
-    <ul>
-      ${carrinho.map(
-        (produto)=>
-          `<li>
-            ${produto.nome} 
-            ${produto.preco}
-          </li>`
-      ).join('')}
-    </ul>
+// Rota de Logout 
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie('connect.sid'); // Removendo o cookie da sessão
+    res.redirect('/login');
+  });
+});
 
-    <a href="/produtos">Continuar comprando</a>
-  `);
-})
-
-//Servidor
-app.listen(3000, ()=>{console.log(`Server listening at http://localhost:3000`)});
+// Iniciar o servidor
+app.listen(3000, () => {
+  console.log('Servidor rodando em http://localhost:3000');
+});
